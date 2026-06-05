@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Optimization Logger — Mira Media</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f5f3; min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 2rem 1rem; }
+    .card { background: #fff; border-radius: 12px; border: 1px solid #e5e5e3; padding: 2rem; width: 100%; max-width: 540px; }
+    .logo { font-size: 13px; font-weight: 600; color: #888; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 1.25rem; }
+    h1 { font-size: 20px; font-weight: 600; color: #111; margin-bottom: 4px; }
+    .subtitle { font-size: 14px; color: #888; margin-bottom: 1.75rem; }
+    .field { margin-bottom: 1rem; }
+    label { display: block; font-size: 13px; font-weight: 500; color: #555; margin-bottom: 5px; }
+    input, select, textarea { width: 100%; padding: 8px 12px; font-size: 14px; border: 1px solid #ddd; border-radius: 8px; background: #fff; color: #111; outline: none; font-family: inherit; transition: border-color 0.15s; }
+    input:focus, select:focus, textarea:focus { border-color: #111; }
+    textarea { min-height: 80px; resize: vertical; }
+    select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .divider { border: none; border-top: 1px solid #eee; margin: 1.5rem 0; }
+    .btn { width: 100%; padding: 10px; font-size: 14px; font-weight: 600; border-radius: 8px; cursor: pointer; border: none; transition: opacity 0.15s; }
+    .btn-primary { background: #111; color: #fff; }
+    .btn-primary:hover { opacity: 0.85; }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-secondary { background: transparent; border: 1px solid #ddd; color: #111; margin-top: 8px; }
+    .btn-secondary:hover { background: #f5f5f3; }
+    .status { font-size: 13px; padding: 10px 12px; border-radius: 8px; margin-top: 12px; display: none; line-height: 1.5; }
+    .status.error { background: #fef2f2; color: #b91c1c; display: block; }
+    .status.loading { background: #f5f5f3; color: #555; display: block; }
+    .spinner { display: inline-block; width: 13px; height: 13px; border: 2px solid transparent; border-top-color: currentColor; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 6px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .success-view { display: none; text-align: center; padding: 1rem 0; }
+    .check-circle { width: 52px; height: 52px; border-radius: 50%; background: #f0fdf4; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; font-size: 24px; }
+    .success-view h2 { font-size: 18px; font-weight: 600; margin-bottom: 6px; }
+    .success-view p { font-size: 14px; color: #888; margin-bottom: 0.5rem; line-height: 1.6; }
+    .standardized-box { font-size: 13px; font-style: italic; background: #f5f5f3; border-radius: 8px; padding: 10px 14px; margin: 1rem 0; text-align: left; line-height: 1.6; color: #333; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">Mira Media</div>
+
+    <div id="form-view">
+      <h1>Log an optimization</h1>
+      <p class="subtitle">Claude standardizes the language and saves it to your Google Sheet.</p>
+
+      <div class="two-col">
+        <div class="field">
+          <label>Client</label>
+          <input type="text" id="client" placeholder="e.g. Wedgwood Insurance" />
+        </div>
+        <div class="field">
+          <label>Date</label>
+          <input type="date" id="opt-date" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Channel</label>
+        <select id="channel">
+          <option value="">Select channel...</option>
+          <option>Google Ads</option>
+          <option>Meta Ads</option>
+          <option>Google Analytics / GA4</option>
+          <option>SEO</option>
+          <option>Email</option>
+          <option>Landing Page</option>
+          <option>Other</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Optimization made</label>
+        <textarea id="opt-notes" placeholder="e.g. turned off 3 underperforming ad sets, reallocated budget to top performers"></textarea>
+      </div>
+
+      <div class="status" id="status-msg"></div>
+      <hr class="divider">
+      <button class="btn btn-primary" id="btn-submit" onclick="submitLog()">Standardize &amp; log to sheet</button>
+    </div>
+
+    <div class="success-view" id="success-view">
+      <div class="check-circle">✓</div>
+      <h2>Logged!</h2>
+      <p>Standardized and saved as:</p>
+      <div class="standardized-box" id="standardized-display"></div>
+      <p id="success-detail"></p>
+      <button class="btn btn-secondary" onclick="resetForm()">Log another</button>
+    </div>
+  </div>
+
+  <script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyvyz_gPG7uRV0B5gfDhMKyUrtgs8hW4jbsAlNask1qaJPoiUdge5xCpWcGvp5B4og/exec";
+
+    document.getElementById("opt-date").value = new Date().toISOString().split("T")[0];
+
+    function showStatus(type, html) {
+      const el = document.getElementById("status-msg");
+      el.className = "status " + type;
+      el.innerHTML = html;
+    }
+    function clearStatus() {
+      document.getElementById("status-msg").className = "status";
+    }
+
+    async function submitLog() {
+      clearStatus();
+      const client  = document.getElementById("client").value.trim();
+      const date    = document.getElementById("opt-date").value;
+      const channel = document.getElementById("channel").value;
+      const notes   = document.getElementById("opt-notes").value.trim();
+
+      if (!client)  { showStatus("error", "Please enter a client name."); return; }
+      if (!date)    { showStatus("error", "Please select a date."); return; }
+      if (!channel) { showStatus("error", "Please select a channel."); return; }
+      if (!notes)   { showStatus("error", "Please describe the optimization."); return; }
+
+      const btn = document.getElementById("btn-submit");
+      btn.disabled = true;
+      showStatus("loading", '<span class="spinner"></span> Standardizing &amp; logging...');
+
+      try {
+        const res = await fetch(SCRIPT_URL, {
+          method: "POST",
+          body: JSON.stringify({ client, date, channel, optimization: notes })
+        });
+        const json = await res.json();
+
+        if (json.status === "ok") {
+          document.getElementById("standardized-display").textContent = json.standardized || notes;
+          document.getElementById("success-detail").textContent = "Added to the \u201c" + client + "\u201d tab.";
+          document.getElementById("form-view").style.display = "none";
+          document.getElementById("success-view").style.display = "block";
+        } else {
+          showStatus("error", "Script error: " + (json.message || "Unknown error."));
+          btn.disabled = false;
+        }
+      } catch (err) {
+        showStatus("error", "Error: " + err.message);
+        btn.disabled = false;
+      }
+    }
+
+    function resetForm() {
+      document.getElementById("client").value = "";
+      document.getElementById("opt-date").value = new Date().toISOString().split("T")[0];
+      document.getElementById("channel").value = "";
+      document.getElementById("opt-notes").value = "";
+      clearStatus();
+      document.getElementById("btn-submit").disabled = false;
+      document.getElementById("success-view").style.display = "none";
+      document.getElementById("form-view").style.display = "block";
+    }
+  </script>
+</body>
+</html>
